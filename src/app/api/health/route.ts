@@ -25,32 +25,34 @@ export async function GET() {
     try {
       const supabase = createClient();
 
-      // Reach the `problems` table and ask for an exact row count.
-      // `head: true` returns no rows (just the count), so this succeeds
-      // on an empty table. `select("*")` here means "any columns" - the
-      // count comes from the `count` option, not from a column literally
-      // named "count".
-      const { error, count } = await supabase
+      // A plain GET (not a HEAD). A HEAD request has no body, so a failing
+      // HEAD gives back an error object with an empty message and no code,
+      // which hides the real problem. A GET returns PostgREST's error JSON,
+      // and returns `[]` (no error) when the table is simply empty.
+      const { data, error, count } = await supabase
         .from("problems")
-        .select("*", { count: "exact", head: true });
+        .select("id", { count: "exact" })
+        .limit(1);
 
       const latencyMs = Date.now() - startTime;
 
       if (error) {
         database = {
           status: "error",
-          message: `Supabase returned an error: ${error.message}`,
+          message: error.message || "Supabase returned an error with no message.",
           code: error.code ?? null,
+          details: error.details ?? null,
           hint: error.hint ?? null,
+          raw: JSON.stringify(error, Object.getOwnPropertyNames(error ?? {})),
           latencyMs,
         };
       } else {
-        // Reached the table successfully. Zero rows is a healthy empty
-        // database, not an error.
+        // Reached the table. Zero rows is a healthy empty database.
+        const rowCount = count ?? data?.length ?? 0;
         database = {
           status: "connected",
-          message: `Connected. 'problems' table is reachable (${count ?? 0} row${count === 1 ? "" : "s"}).`,
-          rowCount: count ?? 0,
+          message: `Connected. 'problems' table is readable (${rowCount} row${rowCount === 1 ? "" : "s"}).`,
+          rowCount,
           latencyMs,
         };
       }
@@ -62,6 +64,7 @@ export async function GET() {
           err instanceof Error
             ? err.message
             : "Unknown exception while querying Supabase.",
+        raw: JSON.stringify(err, Object.getOwnPropertyNames(err ?? {})),
         latencyMs: Date.now() - startTime,
       };
     }
