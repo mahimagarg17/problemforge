@@ -1,0 +1,53 @@
+import { z } from "zod";
+
+export const problemFrequencyEnum = z.enum([
+  "daily",
+  "several_times_a_week",
+  "weekly",
+  "monthly",
+  "rarely",
+]);
+
+export const newProblemSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Add your name so people know who posted this.")
+    .max(60, "That name is a little long. Keep it under 60 characters."),
+  problem: z
+    .string()
+    .trim()
+    .min(20, "Tell us a bit more so others can recognise it. At least a sentence or two.")
+    .max(1200, "Keep it under 1200 characters."),
+  frequency: z.enum(["daily", "several_times_a_week", "weekly", "rarely"], {
+    errorMap: () => ({ message: "Pick how often this happens." }),
+  }),
+  pain_level: z.coerce
+    .number()
+    .int()
+    .min(1, "Pick how frustrating it is.")
+    .max(5, "Pick how frustrating it is."),
+  workaround: z
+    .string()
+    .trim()
+    .max(1000, "Keep it under 1000 characters.")
+    .optional()
+    .or(z.literal("")),
+});
+
+export type NewProblemValues = z.infer<typeof newProblemSchema>;
+
+export const newCommentSchema = z.object({
+  name: z
+    .string()
+    .trim()
+    .min(1, "Add your name.")
+    .max(60, "Keep your name under 60 characters."),
+  content: z
+    .string()
+    .trim()
+    .min(5, "Write a little more.")
+    .max(1200, "Keep it under 1200 characters."),
+});
+
+export type NewCommentValues = z.infer<typeof newCommentSchema>;
