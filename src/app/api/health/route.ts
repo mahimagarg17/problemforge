@@ -1,6 +1,8 @@
 import { NextResponse } from "next/server";
 import { createClient } from "@/lib/supabase/server";
 
+export const dynamic = "force-dynamic";
+
 export async function GET() {
   const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
   const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
@@ -8,11 +10,13 @@ export async function GET() {
   const isConfigured =
     Boolean(supabaseUrl) &&
     Boolean(supabaseAnonKey) &&
-    !supabaseUrl?.includes("placeholder");
+    !supabaseUrl?.includes("placeholder") &&
+    !supabaseAnonKey?.includes("placeholder");
 
-  let dbConnection = {
+  let database: Record<string, unknown> = {
     status: "not_configured",
-    message: "Supabase credentials are not set in .env.local yet.",
+    message:
+      "NEXT_PUBLIC_SUPABASE_URL / NEXT_PUBLIC_SUPABASE_ANON_KEY are not set.",
     latencyMs: 0,
   };
 
@@ -20,27 +24,44 @@ export async function GET() {
     const startTime = Date.now();
     try {
       const supabase = createClient();
-      const { error } = await supabase.from("problems").select("count", { count: "exact", head: true });
+
+      // Reach the `problems` table and ask for an exact row count.
+      // `head: true` returns no rows (just the count), so this succeeds
+      // on an empty table. `select("*")` here means "any columns" - the
+      // count comes from the `count` option, not from a column literally
+      // named "count".
+      const { error, count } = await supabase
+        .from("problems")
+        .select("*", { count: "exact", head: true });
 
       const latencyMs = Date.now() - startTime;
 
       if (error) {
-        dbConnection = {
+        database = {
           status: "error",
-          message: `Connected to Supabase, but query returned: ${error.message} (Did you run supabase/schema.sql in the SQL Editor?)`,
+          message: `Supabase returned an error: ${error.message}`,
+          code: error.code ?? null,
+          hint: error.hint ?? null,
           latencyMs,
         };
       } else {
-        dbConnection = {
+        // Reached the table successfully. Zero rows is a healthy empty
+        // database, not an error.
+        database = {
           status: "connected",
-          message: "Successfully connected to Supabase and verified 'problems' table access.",
+          message: `Connected. 'problems' table is reachable (${count ?? 0} row${count === 1 ? "" : "s"}).`,
+          rowCount: count ?? 0,
           latencyMs,
         };
       }
     } catch (err: unknown) {
-      dbConnection = {
-        status: "exception",
-        message: err instanceof Error ? err.message : "Unknown database connection exception",
+      database = {
+        status: "error",
+        detail: "exception",
+        message:
+          err instanceof Error
+            ? err.message
+            : "Unknown exception while querying Supabase.",
         latencyMs: Date.now() - startTime,
       };
     }
@@ -50,14 +71,13 @@ export async function GET() {
     {
       status: "ok",
       timestamp: new Date().toISOString(),
-      service: "The Query Forum / ProblemForge Foundation",
+      service: "ProblemForge",
       environment: {
         nodeEnv: process.env.NODE_ENV,
         supabaseConfigured: isConfigured,
       },
-      database: dbConnection,
+      database,
     },
-    { status: 200 }
+    { status: 200 },
   );
 }
-
