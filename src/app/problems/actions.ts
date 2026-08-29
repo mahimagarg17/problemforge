@@ -36,6 +36,22 @@ function flattenFieldErrors(error: z.ZodError): Record<string, string> {
   return out;
 }
 
+/**
+ * A short, human-readable reason from a Supabase error object or a thrown
+ * error. Surfaced in the UI so real failures (permissions, disabled auth,
+ * missing columns) are visible instead of a generic "try again".
+ */
+function reasonOf(e: unknown): string {
+  if (e && typeof e === "object") {
+    const obj = e as { message?: unknown; code?: unknown };
+    const msg = typeof obj.message === "string" ? obj.message : "";
+    const code = typeof obj.code === "string" && obj.code ? ` [${obj.code}]` : "";
+    if (msg) return `${msg}${code}`;
+  }
+  if (e instanceof Error) return e.message;
+  return String(e);
+}
+
 function rememberName(name: string) {
   cookies().set(NAME_COOKIE, name, {
     httpOnly: true,
@@ -102,7 +118,7 @@ export async function postProblem(
         console.error("[problemforge] postProblem insert error:", error);
         return {
           ok: false,
-          error: "Something went wrong saving that. Please try again in a moment.",
+          error: `Could not save that. (${reasonOf(error)})`,
         };
       }
       newId = data.id;
@@ -110,7 +126,7 @@ export async function postProblem(
       console.error("[problemforge] postProblem failed:", err);
       return {
         ok: false,
-        error: "We could not save that right now. Please try again in a moment.",
+        error: `Could not save that. (${reasonOf(err)})`,
       };
     }
   } else {
@@ -143,7 +159,12 @@ export async function toggleMeToo(problemId: string): Promise<MeTooResult> {
       });
       if (error || !data) {
         console.error("[problemforge] toggleMeToo rpc error:", error);
-        return { ok: false, voted: wasVoted, count: 0, error: "Please try again." };
+        return {
+          ok: false,
+          voted: wasVoted,
+          count: 0,
+          error: `Could not update that. (${reasonOf(error)})`,
+        };
       }
       const result = data as unknown as { validated: boolean; me_too_count: number };
       if (result.validated) voted.add(problemId);
@@ -154,7 +175,7 @@ export async function toggleMeToo(problemId: string): Promise<MeTooResult> {
       return { ok: true, voted: result.validated, count: result.me_too_count };
     } catch (err) {
       console.error("[problemforge] toggleMeToo failed:", err);
-      return { ok: false, voted: wasVoted, count: 0, error: "Please try again." };
+      return { ok: false, voted: wasVoted, count: 0, error: `Could not update that. (${reasonOf(err)})` };
     }
   }
 
@@ -202,11 +223,11 @@ export async function addComment(
       });
       if (error) {
         console.error("[problemforge] addComment insert error:", error);
-        return { ok: false, error: "That comment did not save. Please try again." };
+        return { ok: false, error: `That comment did not save. (${reasonOf(error)})` };
       }
     } catch (err) {
       console.error("[problemforge] addComment failed:", err);
-      return { ok: false, error: "That comment did not save. Please try again." };
+      return { ok: false, error: `That comment did not save. (${reasonOf(err)})` };
     }
   } else {
     const added = localAddComment(problemId, input);
