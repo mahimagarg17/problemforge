@@ -77,9 +77,17 @@ export async function listProblems(options: {
   }
 }
 
-/** A short list for the landing page. Falls back to seed examples. */
+/**
+ * A short list for the landing page.
+ * - Real rows when the database has any.
+ * - Empty when Supabase is configured but the board is still empty, so the
+ *   homepage shows a genuine empty state instead of un-clickable seed cards.
+ * - Local seed examples only in dev (no Supabase configured), as a preview.
+ */
 export async function listExampleProblems(limit = 4): Promise<Problem[]> {
   const problems = await listProblems();
+  if (problems.length === 0 && isSupabaseConfigured()) return [];
+
   const source = problems.length > 0 ? problems : SEED_PROBLEMS;
   return [...source]
     .sort((a, b) => b.me_too_count - a.me_too_count)
