@@ -54,6 +54,12 @@ export default async function ProblemsPage({
               {active ? ` in ${categoryLabel(active).toLowerCase()}` : ""}
             </p>
           )}
+          {/* Early-days note. Retires itself once the board fills out. */}
+          {!active && problems.length > 0 && problems.length < 20 && (
+            <p className="mt-4 text-sm text-ink-muted">
+              Early days. These are starter problems to show the idea. Add yours.
+            </p>
+          )}
         </div>
         <Link
           href="/problems/new"
