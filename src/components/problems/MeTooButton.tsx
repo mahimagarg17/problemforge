@@ -37,13 +37,17 @@ export function MeTooButton({
   const [error, setError] = useState<string | null>(null);
   const [pending, startTransition] = useTransition();
   const changed = useRef(false);
+  // Synchronous guard: a double-click / double-tap fires two click events in
+  // the same tick, before `pending` has flipped. This blocks the second one.
+  const inFlight = useRef(false);
 
   useEffect(() => {
     if (voted !== initialVoted) changed.current = true;
   }, [voted, initialVoted]);
 
   function handleClick() {
-    if (pending) return;
+    if (inFlight.current || pending) return;
+    inFlight.current = true;
     setError(null);
 
     const prevVoted = voted;
@@ -51,19 +55,27 @@ export function MeTooButton({
     const nextVoted = !prevVoted;
     changed.current = true;
 
+    // Optimistic hint only. The server response below is the source of truth.
     setVoted(nextVoted);
     setCount(Math.max(0, prevCount + (nextVoted ? 1 : -1)));
 
     startTransition(async () => {
-      const result = await toggleMeToo(problemId);
-      if (!result.ok) {
-        setVoted(prevVoted);
-        setCount(prevCount);
-        setError(result.error ?? "That didn't go through. Try again in a moment.");
-        return;
+      try {
+        const result = await toggleMeToo(problemId);
+        if (!result.ok) {
+          setVoted(prevVoted);
+          setCount(prevCount);
+          setError(
+            result.error ?? "That didn't go through. Try again in a moment.",
+          );
+          return;
+        }
+        // Authoritative values from the database.
+        setVoted(result.voted);
+        setCount(result.count);
+      } finally {
+        inFlight.current = false;
       }
-      setVoted(result.voted);
-      setCount(result.count);
     });
   }
 
@@ -80,12 +92,13 @@ export function MeTooButton({
       <button
         type="button"
         onClick={handleClick}
+        disabled={pending}
         aria-pressed={voted}
         aria-busy={pending}
         className={cn(
           "group/metoo inline-flex items-center gap-2 rounded-md border font-medium",
           "transition-[transform,background-color,border-color,color] duration-200 ease-out",
-          "active:scale-[0.96] disabled:cursor-not-allowed",
+          "active:scale-[0.96] disabled:cursor-not-allowed disabled:opacity-80",
           compact ? "px-3 py-1.5 text-xs" : "px-5 py-3 text-sm",
           voted
             ? "border-vermillion bg-vermillion text-canvas"

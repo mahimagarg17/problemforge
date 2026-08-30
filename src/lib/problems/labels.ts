@@ -82,6 +82,20 @@ export const CATEGORY_FILTERS: { value: ProblemCategory; label: string }[] =
   }));
 
 /**
+ * Options for the "pick a category" control on the post form. Same list as the
+ * filters, but "Everyday life" (the catch-all) sits last where it reads as a
+ * fallback rather than a real choice.
+ */
+export const CATEGORY_OPTIONS: { value: ProblemCategory; label: string }[] = [
+  ...CATEGORY_FILTERS.filter((c) => c.value !== "other"),
+  { value: "other", label: CATEGORY_META.other.label },
+];
+
+export function isProblemCategory(value: unknown): value is ProblemCategory {
+  return typeof value === "string" && value in CATEGORY_META;
+}
+
+/**
  * Light keyword guess so the board stays useful without asking people
  * to pick a category. Falls back to "other" whenever nothing matches.
  */
@@ -113,23 +127,40 @@ const TRAILING_WORDS = new Set([
 ]);
 
 export function deriveTitle(problem: string): string {
-  const cleaned = problem.trim().replace(/\s+/g, " ");
+  const cleaned = problem
+    .trim()
+    .replace(/\s+/g, " ")
+    // "WWWWWWWW..." / "!!!!!!" -> at most three, so a title is never one token.
+    .replace(/(.)\1{3,}/g, "$1$1$1")
+    // Any remaining unbroken run that would still blow out a card gets cut.
+    .replace(/\S{40,}/g, (token) => `${token.slice(0, 39)}…`);
+
   const firstSentence = cleaned.split(/(?<=[.!?])\s/)[0] ?? cleaned;
+  let base = firstSentence.length <= TITLE_MAX ? firstSentence : cleaned;
 
-  if (firstSentence.length <= TITLE_MAX) {
-    return firstSentence.replace(/[.]+$/, "");
+  if (base.length > TITLE_MAX) {
+    let trimmed = base.slice(0, TITLE_MAX);
+    const lastSpace = trimmed.lastIndexOf(" ");
+    if (lastSpace > 48) trimmed = trimmed.slice(0, lastSpace);
+
+    let words = trimmed.split(" ");
+    while (
+      words.length > 4 &&
+      TRAILING_WORDS.has(words[words.length - 1].toLowerCase())
+    ) {
+      words = words.slice(0, -1);
+    }
+    base = `${words.join(" ")}…`;
   }
 
-  let trimmed = cleaned.slice(0, TITLE_MAX);
-  const lastSpace = trimmed.lastIndexOf(" ");
-  if (lastSpace > 48) trimmed = trimmed.slice(0, lastSpace);
+  base = base.replace(/[,;:\s]+$/, "").replace(/\.+$/, "").trim();
 
-  let words = trimmed.split(" ");
-  while (words.length > 4 && TRAILING_WORDS.has(words[words.length - 1].toLowerCase())) {
-    words = words.slice(0, -1);
+  // Nothing usable (symbols only, or a couple of characters): don't ship a
+  // broken-looking headline.
+  if (base.replace(/[^A-Za-z0-9]/g, "").length < 3) {
+    return "A problem worth solving";
   }
-
-  return `${words.join(" ").replace(/[,;:.\s]+$/, "")}…`;
+  return base;
 }
 
 export function timeAgo(dateString: string): string {

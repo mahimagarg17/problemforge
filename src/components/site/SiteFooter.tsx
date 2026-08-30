@@ -20,6 +20,12 @@ export function SiteFooter() {
           </Link>
         </nav>
       </div>
+      <div className="mx-auto max-w-shell border-t border-line-soft px-6 py-6 text-xs leading-relaxed text-ink-faint lg:px-10">
+        Problems and replies on ProblemForge are posted by its users. We
+        don&apos;t verify or guarantee that anything shared here is accurate,
+        safe, or right for your situation, and it isn&apos;t professional advice.
+        Use your own judgement before acting on it.
+      </div>
     </footer>
   );
 }

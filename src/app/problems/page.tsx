@@ -54,10 +54,15 @@ export default async function ProblemsPage({
               {active ? ` in ${categoryLabel(active).toLowerCase()}` : ""}
             </p>
           )}
-          {/* Early-days note. Retires itself once the board fills out. */}
-          {!active && problems.length > 0 && problems.length < 20 && (
+          {/* Honest disclosure while any founder-seeded starters are on the board. */}
+          {problems.some((p) => p.is_seed) && (
             <p className="mt-4 text-sm text-ink-muted">
-              Early days. These are starter problems to show the idea. Add yours.
+              Early days. A few starter problems (marked{" "}
+              <span className="font-semibold uppercase tracking-[0.1em] text-ink-faint">
+                Starter
+              </span>
+              ) show what belongs here. The rest are from people like you. Add
+              yours.
             </p>
           )}
         </div>

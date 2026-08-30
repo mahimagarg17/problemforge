@@ -68,7 +68,7 @@ export function Hero({
           </div>
 
           {ledger.length > 0 && (
-            <aside className="lg:border-l lg:border-line lg:pl-10">
+            <aside className="min-w-0 lg:border-l lg:border-line lg:pl-10">
               <p className="mb-5 text-xs font-semibold uppercase tracking-[0.16em] text-ink-faint">
                 {hasRealData ? "Lately on the board" : "A few to give you the idea"}
               </p>
@@ -91,7 +91,7 @@ export function Hero({
                             backgroundColor: categoryColor(problem.category),
                           }}
                         />
-                        <span className="font-display text-lg leading-snug text-ink-soft transition-colors group-hover:text-vermillion">
+                        <span className="break-anywhere font-display text-lg leading-snug text-ink-soft transition-colors group-hover:text-vermillion">
                           &ldquo;{problem.title}&rdquo;
                         </span>
                       </span>

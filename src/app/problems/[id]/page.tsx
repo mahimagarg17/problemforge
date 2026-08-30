@@ -24,7 +24,9 @@ export async function generateMetadata({
   params: { id: string };
 }): Promise<Metadata> {
   const problem = await getProblem(params.id);
-  if (!problem) return { title: "Problem not found" };
+  // Decide the 404 here, before the response is committed, so an unknown id
+  // returns a real HTTP 404 and not a 200 with the "not found" body.
+  if (!problem) notFound();
   return { title: problem.title, description: problem.description.slice(0, 155) };
 }
 
@@ -81,6 +83,16 @@ export default async function ProblemPage({
               <span className="font-semibold uppercase tracking-[0.1em] text-ink-muted">
                 {frequencyLabel(problem.frequency)}
               </span>
+              {problem.is_seed && (
+                <>
+                  <span aria-hidden="true" className="text-line-strong">
+                    ·
+                  </span>
+                  <span className="rounded-full border border-line-strong px-1.5 py-px text-[10px] font-semibold uppercase tracking-[0.1em] text-ink-faint">
+                    Starter
+                  </span>
+                </>
+              )}
             </div>
 
             <h1 className="mt-3 text-balance font-display text-3xl leading-[1.15] text-ink sm:text-[2.5rem]">
@@ -88,7 +100,7 @@ export default async function ProblemPage({
             </h1>
 
             <div className="mt-4 flex flex-wrap items-center gap-x-3 gap-y-1.5 text-sm text-ink-faint">
-              <span>
+              <span className="break-anywhere">
                 by <span className="text-ink-muted">{problem.author_name}</span>
               </span>
               <span aria-hidden="true">·</span>
@@ -98,7 +110,7 @@ export default async function ProblemPage({
             </div>
           </header>
 
-          <p className="mt-7 whitespace-pre-line text-lg leading-relaxed text-ink-soft">
+          <p className="mt-7 whitespace-pre-line break-anywhere text-lg leading-relaxed text-ink-soft">
             {problem.description}
           </p>
 
@@ -107,7 +119,7 @@ export default async function ProblemPage({
               <p className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
                 What they do about it now
               </p>
-              <p className="mt-2 leading-relaxed text-ink-soft">
+              <p className="mt-2 whitespace-pre-line break-anywhere leading-relaxed text-ink-soft">
                 {problem.current_workaround}
               </p>
             </div>
@@ -121,6 +133,12 @@ export default async function ProblemPage({
             />
           </div>
 
+          <p className="mt-12 border-t border-line pt-6 text-sm text-ink-faint">
+            Replies come from other people using ProblemForge, not from
+            ProblemForge itself. Nothing here is checked or verified. Use your own
+            judgement before acting on a suggestion.
+          </p>
+
           <Conversation
             problemId={problem.id}
             initialComments={comments}
@@ -129,7 +147,7 @@ export default async function ProblemPage({
         </article>
 
         {related.length > 0 && (
-          <aside className="mt-14 lg:mt-1">
+          <aside className="mt-14 min-w-0 lg:mt-1">
             <div className="lg:sticky lg:top-24">
               <h2 className="text-xs font-semibold uppercase tracking-[0.14em] text-ink-faint">
                 {relatedInCategory
@@ -143,7 +161,7 @@ export default async function ProblemPage({
                       href={`/problems/${p.id}`}
                       className="group -mx-3 flex flex-col gap-1 rounded-md px-3 py-4 transition-colors hover:bg-line-soft/60"
                     >
-                      <span className="font-display text-lg leading-snug text-ink transition-colors group-hover:text-vermillion">
+                      <span className="break-anywhere font-display text-lg leading-snug text-ink transition-colors group-hover:text-vermillion">
                         {p.title}
                       </span>
                       <span className="text-sm text-ink-faint">

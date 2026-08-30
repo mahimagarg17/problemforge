@@ -8,7 +8,7 @@ function daysAgo(n: number): string {
  * Starter problems. Used to seed the local preview store, and shown on the
  * landing page when the database has nothing in it yet.
  */
-export const SEED_PROBLEMS: Problem[] = [
+export const SEED_PROBLEMS: Problem[] = ([
   {
     id: "seed-pg-listings",
     author_name: "Aarti",
@@ -94,7 +94,7 @@ export const SEED_PROBLEMS: Problem[] = [
     comments_count: 0,
     created_at: daysAgo(5),
   },
-];
+] as Omit<Problem, "is_seed">[]).map((p) => ({ ...p, is_seed: true }));
 
 export const SEED_COMMENTS: Comment[] = [
   {

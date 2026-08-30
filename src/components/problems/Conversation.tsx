@@ -36,10 +36,13 @@ export function Conversation({
 
   const contentRef = useRef<HTMLTextAreaElement>(null);
   const newRef = useRef<HTMLLIElement>(null);
+  // Synchronous guard against a double submit (double-click, repeated Enter):
+  // both events fire in the same tick, before `pending` has flipped.
+  const submitting = useRef(false);
 
   function handleSubmit(event: React.FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (pending) return;
+    if (submitting.current || pending) return;
 
     const trimmedName = name.trim();
     const body = content.trim();
@@ -54,6 +57,7 @@ export function Conversation({
       return;
     }
 
+    submitting.current = true;
     setFieldErrors({});
     setFormError(null);
     setJustAdded(false);
@@ -87,23 +91,28 @@ export function Conversation({
     });
 
     startTransition(async () => {
-      const result = await addComment({ ok: false }, formData);
-      if (!result.ok) {
-        // Roll back the optimistic comment and give the user their text back
-        // so a rejected reply is never lost.
-        setComments((prev) => prev.filter((c) => c.id !== tempId));
-        setNewId(null);
-        setContent(content); // restore exactly what they typed
-        contentRef.current?.focus();
-        if (result.fieldErrors) setFieldErrors(result.fieldErrors);
-        setFormError(
-          result.error ?? (result.fieldErrors ? null : "That didn't save. Try again."),
-        );
-        return;
+      try {
+        const result = await addComment({ ok: false }, formData);
+        if (!result.ok) {
+          // Roll back the optimistic comment and give the user their text back
+          // so a rejected reply is never lost.
+          setComments((prev) => prev.filter((c) => c.id !== tempId));
+          setNewId(null);
+          setContent(content); // restore exactly what they typed
+          contentRef.current?.focus();
+          if (result.fieldErrors) setFieldErrors(result.fieldErrors);
+          setFormError(
+            result.error ??
+              (result.fieldErrors ? null : "That didn't save. Try again."),
+          );
+          return;
+        }
+        setJustAdded(true);
+        router.refresh();
+        window.setTimeout(() => setNewId(null), 2600);
+      } finally {
+        submitting.current = false;
       }
-      setJustAdded(true);
-      router.refresh();
-      window.setTimeout(() => setNewId(null), 2600);
     });
   }
 
@@ -135,14 +144,14 @@ export function Conversation({
                   isNew && "pf-rise pf-new-hint",
                 )}
               >
-                <p className="text-sm text-ink-faint">
+                <p className="break-anywhere text-sm text-ink-faint">
                   <span className="font-medium text-ink">
                     {comment.author_name}
                   </span>
                   <span className="mx-2">·</span>
                   {isTemp ? "just now" : timeAgo(comment.created_at)}
                 </p>
-                <p className="mt-2 whitespace-pre-line leading-relaxed text-ink-soft">
+                <p className="mt-2 whitespace-pre-line break-anywhere leading-relaxed text-ink-soft">
                   {comment.content}
                 </p>
               </li>

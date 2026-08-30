@@ -8,6 +8,19 @@ export const problemFrequencyEnum = z.enum([
   "rarely",
 ]);
 
+export const problemCategoryEnum = z.enum([
+  "education",
+  "work_productivity",
+  "money_finance",
+  "housing_roommates",
+  "food_dining",
+  "local_services",
+  "transport_travel",
+  "health_fitness",
+  "shopping_commerce",
+  "other",
+]);
+
 export const newProblemSchema = z.object({
   name: z
     .string()
@@ -19,6 +32,7 @@ export const newProblemSchema = z.object({
     .trim()
     .min(20, "Tell us a bit more so others can recognise it. At least a sentence or two.")
     .max(6000, "Keep it under 6000 characters."),
+  category: problemCategoryEnum.optional(),
   frequency: z.enum(["daily", "several_times_a_week", "weekly", "rarely"], {
     errorMap: () => ({ message: "Pick how often this happens." }),
   }),

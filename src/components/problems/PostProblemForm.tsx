@@ -1,9 +1,14 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { postProblem, type FormState } from "@/app/problems/actions";
-import { FREQUENCY_OPTIONS, painColor, painLabel } from "@/lib/problems/labels";
+import {
+  CATEGORY_OPTIONS,
+  FREQUENCY_OPTIONS,
+  painColor,
+  painLabel,
+} from "@/lib/problems/labels";
 import { CharCounter } from "@/components/ui/CharCounter";
 import { cn } from "@/lib/utils";
 
@@ -52,8 +57,21 @@ export function PostProblemForm({ defaultName }: { defaultName: string }) {
   const [workaroundLen, setWorkaroundLen] = useState(0);
   const err = state.fieldErrors ?? {};
 
+  // Drop a same-tick second submission (double-click, repeated Enter) so it
+  // can't create two identical problems. Released once the action responds.
+  const submitting = useRef(false);
+  useEffect(() => {
+    submitting.current = false;
+  }, [state]);
+
+  function guardedAction(formData: FormData) {
+    if (submitting.current) return;
+    submitting.current = true;
+    return formAction(formData);
+  }
+
   return (
-    <form action={formAction} className="space-y-12">
+    <form action={guardedAction} className="space-y-12">
       {state.error && (
         <p className="pf-rise rounded-md border border-vermillion-line bg-vermillion-wash px-4 py-3 text-sm text-vermillion-dark">
           {state.error}
@@ -102,6 +120,34 @@ export function PostProblemForm({ defaultName }: { defaultName: string }) {
         />
         <CharCounter id="problem-counter" current={problemLen} max={PROBLEM_MAX} />
         <FieldError id="problem-error" message={err.problem} />
+      </div>
+
+      <div>
+        <label htmlFor="category" className="font-display text-xl text-ink">
+          What&apos;s it about?
+        </label>
+        <p className="mt-1 text-sm text-ink-muted">
+          Pick the closest area. It helps people browsing find it.
+        </p>
+        <select
+          id="category"
+          name="category"
+          required
+          defaultValue=""
+          aria-invalid={Boolean(err.category)}
+          aria-describedby={err.category ? "category-error" : undefined}
+          className={cn(FIELD_CLASS, "max-w-sm appearance-none bg-paper")}
+        >
+          <option value="" disabled>
+            Choose one
+          </option>
+          {CATEGORY_OPTIONS.map((option) => (
+            <option key={option.value} value={option.value}>
+              {option.label}
+            </option>
+          ))}
+        </select>
+        <FieldError id="category-error" message={err.category} />
       </div>
 
       <fieldset>
@@ -211,9 +257,18 @@ export function PostProblemForm({ defaultName }: { defaultName: string }) {
       </div>
 
       <div className="border-t border-line pt-8">
-        <SubmitButton />
+        <p className="rounded-md border border-line-strong bg-paper px-4 py-3 text-sm text-ink-muted">
+          Your problem will be publicly visible on ProblemForge. Don&apos;t
+          include information you want to keep private. Posts can&apos;t be edited
+          or deleted yet.
+        </p>
+        <div className="mt-6">
+          <SubmitButton />
+        </div>
         <p className="mt-4 text-sm text-ink-faint">
           No account needed. Your problem shows up right after you post it.
+          Content on ProblemForge is user-generated and isn&apos;t professional
+          advice.
         </p>
       </div>
     </form>

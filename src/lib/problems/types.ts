@@ -17,6 +17,8 @@ export interface Problem {
   me_too_count: number;
   comments_count: number;
   created_at: string;
+  /** True for the founder-seeded starter problems. Shown with a "Starter" tag. */
+  is_seed: boolean;
 }
 
 export interface Comment {
@@ -30,6 +32,7 @@ export interface Comment {
 export interface NewProblemInput {
   name: string;
   problem: string;
+  category: ProblemCategory;
   frequency: ProblemFrequency;
   pain_level: number;
   workaround?: string;

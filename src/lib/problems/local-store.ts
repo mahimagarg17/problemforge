@@ -1,6 +1,6 @@
 import type { Comment, NewCommentInput, NewProblemInput, Problem } from "./types";
 import { SEED_COMMENTS, SEED_PROBLEMS } from "./seed";
-import { classifyCategory, deriveTitle } from "./labels";
+import { deriveTitle } from "./labels";
 
 /**
  * In-memory store used when Supabase is not configured, so the whole flow
@@ -52,13 +52,14 @@ export function localAddProblem(input: NewProblemInput): Problem {
     author_name: input.name.trim(),
     title: deriveTitle(input.problem),
     description: input.problem.trim(),
-    category: classifyCategory(`${input.problem} ${input.workaround ?? ""}`),
+    category: input.category,
     frequency: input.frequency,
     pain_level: input.pain_level,
     current_workaround: input.workaround?.trim() ? input.workaround.trim() : null,
     me_too_count: 0,
     comments_count: 0,
     created_at: new Date().toISOString(),
+    is_seed: false,
   };
   store.problems.unshift(problem);
   return problem;

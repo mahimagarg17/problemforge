@@ -36,9 +36,19 @@ export function ProblemRow({
           category={problem.category}
           className="text-[11px] font-medium tracking-[0.1em] opacity-90"
         />
+        {problem.is_seed && (
+          <>
+            <span aria-hidden="true" className="text-line-strong">
+              ·
+            </span>
+            <span className="rounded-full border border-line-strong px-1.5 py-px text-[10px] font-semibold uppercase tracking-[0.1em] text-ink-faint">
+              Starter
+            </span>
+          </>
+        )}
       </div>
 
-      <h3 className="mt-3 text-pretty font-display text-xl leading-snug text-ink sm:text-[1.55rem]">
+      <h3 className="mt-3 text-pretty break-anywhere font-display text-xl leading-snug text-ink sm:text-[1.55rem]">
         <Link
           href={`/problems/${problem.id}`}
           className="transition-[color,transform] duration-200 after:absolute after:inset-0 group-hover:text-vermillion"

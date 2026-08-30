@@ -36,22 +36,29 @@ function flattenFieldErrors(error: z.ZodError): Record<string, string> {
   return out;
 }
 
+const COOKIE_BASE = {
+  httpOnly: true,
+  sameSite: "lax",
+  path: "/",
+  maxAge: COOKIE_MAX_AGE,
+  secure: process.env.NODE_ENV === "production",
+} as const;
+
 function rememberName(name: string) {
-  cookies().set(NAME_COOKIE, name, {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: COOKIE_MAX_AGE,
-  });
+  cookies().set(NAME_COOKIE, name, COOKIE_BASE);
 }
 
 function writeVoted(ids: Set<string>) {
-  cookies().set(VOTED_COOKIE, [...ids].join(","), {
-    httpOnly: true,
-    sameSite: "lax",
-    path: "/",
-    maxAge: COOKIE_MAX_AGE,
-  });
+  cookies().set(VOTED_COOKIE, [...ids].join(","), COOKIE_BASE);
+}
+
+/** True when a write failed only because the author_name column is not there yet. */
+function isMissingColumnError(error: { message?: string; code?: string } | null) {
+  if (!error) return false;
+  return (
+    error.code === "42703" ||
+    /author_name|column .* does not exist/i.test(error.message ?? "")
+  );
 }
 
 export async function postProblem(
@@ -61,6 +68,7 @@ export async function postProblem(
   const parsed = newProblemSchema.safeParse({
     name: formData.get("name"),
     problem: formData.get("problem"),
+    category: formData.get("category") ?? undefined,
     frequency: formData.get("frequency"),
     pain_level: formData.get("pain_level"),
     workaround: formData.get("workaround") ?? "",
@@ -72,6 +80,8 @@ export async function postProblem(
 
   const input = parsed.data;
   const workaround = input.workaround?.trim() ? input.workaround.trim() : null;
+  const category =
+    input.category ?? classifyCategory(`${input.problem} ${workaround ?? ""}`);
   let newId: string;
 
   if (isSupabaseConfigured()) {
@@ -79,24 +89,41 @@ export async function postProblem(
       const supabase = createLooseClient();
       const user = await ensureAnonUser(supabase);
 
-      await supabase
-        .from("profiles")
-        .update({ display_name: input.name })
-        .eq("id", user.id);
+      // The typed name is snapshotted onto the row so editing it later (on a
+      // future post or comment) can never rewrite this author's history.
+      const row = {
+        author_id: user.id,
+        author_name: input.name,
+        title: deriveTitle(input.problem),
+        description: input.problem,
+        category,
+        frequency: input.frequency,
+        pain_level: input.pain_level,
+        current_workaround: workaround,
+      };
 
-      const { data, error } = await supabase
+      let { data, error } = await supabase
         .from("problems")
-        .insert({
-          author_id: user.id,
-          title: deriveTitle(input.problem),
-          description: input.problem,
-          category: classifyCategory(`${input.problem} ${workaround ?? ""}`),
-          frequency: input.frequency,
-          pain_level: input.pain_level,
-          current_workaround: workaround,
-        })
+        .insert(row)
         .select("id")
         .single();
+
+      if (isMissingColumnError(error)) {
+        const { author_id, title, description, frequency, pain_level } = row;
+        ({ data, error } = await supabase
+          .from("problems")
+          .insert({
+            author_id,
+            title,
+            description,
+            category,
+            frequency,
+            pain_level,
+            current_workaround: workaround,
+          })
+          .select("id")
+          .single());
+      }
 
       if (error || !data) {
         console.error("[problemforge] postProblem insert error:", error);
@@ -114,7 +141,11 @@ export async function postProblem(
       };
     }
   } else {
-    newId = localAddProblem({ ...input, workaround: workaround ?? undefined }).id;
+    newId = localAddProblem({
+      ...input,
+      category,
+      workaround: workaround ?? undefined,
+    }).id;
   }
 
   rememberName(input.name);
@@ -196,15 +227,22 @@ export async function addComment(
     try {
       const supabase = createLooseClient();
       const user = await ensureAnonUser(supabase);
-      await supabase
-        .from("profiles")
-        .update({ display_name: input.name })
-        .eq("id", user.id);
-      const { error } = await supabase.from("problem_comments").insert({
+
+      let { error } = await supabase.from("problem_comments").insert({
         problem_id: problemId,
         author_id: user.id,
+        author_name: input.name,
         content: input.content,
       });
+
+      if (isMissingColumnError(error)) {
+        ({ error } = await supabase.from("problem_comments").insert({
+          problem_id: problemId,
+          author_id: user.id,
+          content: input.content,
+        }));
+      }
+
       if (error) {
         console.error("[problemforge] addComment insert error:", error);
         return { ok: false, error: "That comment did not save. Please try again." };

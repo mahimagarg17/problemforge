@@ -21,6 +21,9 @@
     font-family: var(--font-display), Georgia, serif;
     font-weight: 500;
     letter-spacing: -0.01em;
+    /* Titles are derived from free text people type. A pasted URL or a run of
+       one character must never be able to stretch the page. */
+    overflow-wrap: anywhere;
   }
 
   ::selection {
@@ -41,6 +44,12 @@
   }
   .text-pretty {
     text-wrap: pretty;
+  }
+  /* For any element that renders text a user typed: wrap mid-"word" when a
+     token (URL, hash, keyboard mash) is longer than its container. */
+  .break-anywhere {
+    overflow-wrap: anywhere;
+    word-break: break-word;
   }
 }
 
