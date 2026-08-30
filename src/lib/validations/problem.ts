@@ -18,7 +18,7 @@ export const newProblemSchema = z.object({
     .string()
     .trim()
     .min(20, "Tell us a bit more so others can recognise it. At least a sentence or two.")
-    .max(1200, "Keep it under 1200 characters."),
+    .max(6000, "Keep it under 6000 characters."),
   frequency: z.enum(["daily", "several_times_a_week", "weekly", "rarely"], {
     errorMap: () => ({ message: "Pick how often this happens." }),
   }),
@@ -30,7 +30,7 @@ export const newProblemSchema = z.object({
   workaround: z
     .string()
     .trim()
-    .max(1000, "Keep it under 1000 characters.")
+    .max(3000, "Keep it under 3000 characters.")
     .optional()
     .or(z.literal("")),
 });
@@ -47,7 +47,7 @@ export const newCommentSchema = z.object({
     .string()
     .trim()
     .min(5, "Write a little more.")
-    .max(1200, "Keep it under 1200 characters."),
+    .max(6000, "Keep it under 6000 characters."),
 });
 
 export type NewCommentValues = z.infer<typeof newCommentSchema>;

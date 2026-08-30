@@ -45,6 +45,8 @@ export function Conversation({
     const nextErrors: Record<string, string> = {};
     if (!trimmedName) nextErrors.name = "Add your name.";
     if (content.length < 5) nextErrors.content = "Write a little more.";
+    else if (content.length > 6000)
+      nextErrors.content = "Keep it under 6000 characters.";
     if (Object.keys(nextErrors).length > 0) {
       setFieldErrors(nextErrors);
       return;
@@ -85,8 +87,14 @@ export function Conversation({
     startTransition(async () => {
       const result = await addComment({ ok: false }, formData);
       if (!result.ok) {
+        // Roll back the optimistic comment and give the user their text back
+        // so a rejected reply is never lost.
         setComments((prev) => prev.filter((c) => c.id !== tempId));
         setNewId(null);
+        if (contentRef.current) {
+          contentRef.current.value = content;
+          contentRef.current.focus();
+        }
         if (result.fieldErrors) setFieldErrors(result.fieldErrors);
         setFormError(
           result.error ?? (result.fieldErrors ? null : "That didn't save. Try again."),
