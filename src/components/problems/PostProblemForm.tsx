@@ -4,7 +4,11 @@ import { useState } from "react";
 import { useFormState, useFormStatus } from "react-dom";
 import { postProblem, type FormState } from "@/app/problems/actions";
 import { FREQUENCY_OPTIONS, painColor, painLabel } from "@/lib/problems/labels";
+import { CharCounter } from "@/components/ui/CharCounter";
 import { cn } from "@/lib/utils";
+
+const PROBLEM_MAX = 6000;
+const WORKAROUND_MAX = 3000;
 
 const INITIAL: FormState = { ok: false };
 
@@ -44,6 +48,8 @@ function FieldError({ id, message }: { id: string; message?: string }) {
 export function PostProblemForm({ defaultName }: { defaultName: string }) {
   const [state, formAction] = useFormState(postProblem, INITIAL);
   const [pain, setPain] = useState<number | null>(null);
+  const [problemLen, setProblemLen] = useState(0);
+  const [workaroundLen, setWorkaroundLen] = useState(0);
   const err = state.fieldErrors ?? {};
 
   return (
@@ -86,10 +92,15 @@ export function PostProblemForm({ defaultName }: { defaultName: string }) {
           id="problem"
           name="problem"
           rows={6}
+          onChange={(e) => setProblemLen(e.target.value.length)}
           aria-invalid={Boolean(err.problem)}
-          aria-describedby={err.problem ? "problem-error" : undefined}
+          aria-describedby={cn(
+            "problem-counter",
+            err.problem && "problem-error",
+          )}
           className={cn(FIELD_CLASS, "resize-y leading-relaxed")}
         />
+        <CharCounter id="problem-counter" current={problemLen} max={PROBLEM_MAX} />
         <FieldError id="problem-error" message={err.problem} />
       </div>
 
@@ -183,9 +194,18 @@ export function PostProblemForm({ defaultName }: { defaultName: string }) {
           id="workaround"
           name="workaround"
           rows={4}
+          onChange={(e) => setWorkaroundLen(e.target.value.length)}
           aria-invalid={Boolean(err.workaround)}
-          aria-describedby={err.workaround ? "workaround-error" : undefined}
+          aria-describedby={cn(
+            "workaround-counter",
+            err.workaround && "workaround-error",
+          )}
           className={cn(FIELD_CLASS, "resize-y leading-relaxed")}
+        />
+        <CharCounter
+          id="workaround-counter"
+          current={workaroundLen}
+          max={WORKAROUND_MAX}
         />
         <FieldError id="workaround-error" message={err.workaround} />
       </div>

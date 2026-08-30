@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { addComment } from "@/app/problems/actions";
 import { timeAgo } from "@/lib/problems/labels";
 import type { Comment } from "@/lib/problems/types";
+import { CharCounter } from "@/components/ui/CharCounter";
 import { cn } from "@/lib/utils";
 
 function prefersReducedMotion() {
@@ -26,6 +27,7 @@ export function Conversation({
   const router = useRouter();
   const [comments, setComments] = useState<Comment[]>(initialComments);
   const [name, setName] = useState(defaultName);
+  const [content, setContent] = useState("");
   const [newId, setNewId] = useState<string | null>(null);
   const [fieldErrors, setFieldErrors] = useState<Record<string, string>>({});
   const [formError, setFormError] = useState<string | null>(null);
@@ -40,11 +42,11 @@ export function Conversation({
     if (pending) return;
 
     const trimmedName = name.trim();
-    const content = (contentRef.current?.value ?? "").trim();
+    const body = content.trim();
 
     const nextErrors: Record<string, string> = {};
     if (!trimmedName) nextErrors.name = "Add your name.";
-    if (content.length < 5) nextErrors.content = "Write a little more.";
+    if (body.length < 5) nextErrors.content = "Write a little more.";
     else if (content.length > 6000)
       nextErrors.content = "Keep it under 6000 characters.";
     if (Object.keys(nextErrors).length > 0) {
@@ -59,20 +61,20 @@ export function Conversation({
     const formData = new FormData();
     formData.set("problem_id", problemId);
     formData.set("name", trimmedName);
-    formData.set("content", content);
+    formData.set("content", body);
 
     const tempId = `temp-${Date.now()}`;
     const optimistic: Comment = {
       id: tempId,
       problem_id: problemId,
       author_name: trimmedName,
-      content,
+      content: body,
       created_at: new Date().toISOString(),
     };
 
     setComments((prev) => [...prev, optimistic]);
     setNewId(tempId);
-    if (contentRef.current) contentRef.current.value = "";
+    setContent("");
 
     requestAnimationFrame(() => {
       const el = newRef.current;
@@ -91,10 +93,8 @@ export function Conversation({
         // so a rejected reply is never lost.
         setComments((prev) => prev.filter((c) => c.id !== tempId));
         setNewId(null);
-        if (contentRef.current) {
-          contentRef.current.value = content;
-          contentRef.current.focus();
-        }
+        setContent(content); // restore exactly what they typed
+        contentRef.current?.focus();
         if (result.fieldErrors) setFieldErrors(result.fieldErrors);
         setFormError(
           result.error ?? (result.fieldErrors ? null : "That didn't save. Try again."),
@@ -187,11 +187,21 @@ export function Conversation({
             id="comment-content"
             name="content"
             rows={4}
+            value={content}
+            onChange={(e) => setContent(e.target.value)}
             aria-invalid={Boolean(fieldErrors.content)}
+            aria-describedby={cn(
+              "comment-counter",
+              fieldErrors.content && "comment-content-error",
+            )}
             className="w-full resize-y rounded-md border border-line-strong bg-paper px-3.5 py-2.5 text-sm leading-relaxed text-ink outline-none transition-[border-color,box-shadow] duration-150 focus:border-ink focus:ring-4 focus:ring-vermillion/10"
           />
+          <CharCounter id="comment-counter" current={content.length} max={6000} />
           {fieldErrors.content && (
-            <p className="pf-rise text-sm text-vermillion-dark">
+            <p
+              id="comment-content-error"
+              className="pf-rise text-sm text-vermillion-dark"
+            >
               {fieldErrors.content}
             </p>
           )}
