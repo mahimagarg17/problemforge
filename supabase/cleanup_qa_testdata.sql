@@ -67,3 +67,41 @@ order by created_at;
 -- select count(*) from public.problem_comments;               -- expect 7
 -- select title, comments_count from public.problems
 --   where title = 'Group trips fall apart because nobody wants to be the one who books';  -- expect 0
+
+
+-- ==============================================================================
+-- ---- 5. SECOND QA PASS (post-deploy) test data ----------------------------
+-- Created by the live verification run after the hardening deploy. All titled
+-- "QA2 ...". 5 problems + 1 comment on the "what to cook" starter.
+-- ==============================================================================
+
+-- preview
+select id, title, created_at from public.problems
+where id in (
+  'a64d7222-bf49-4b74-a2de-2ab1159dc5f6',  -- "QA2 clean post ..."
+  'e148c9d0-0974-4a5f-b6f8-b838c9b24b74',  -- "QA2 interaction target ..." (has QA2 comments + votes)
+  'e164171e-5f71-4bc5-aa63-a34e7b5395cc',  -- "QA2 long+xss ..." (1000-char token test)
+  '6b62f944-f8d8-47dc-b13f-7a98537841a2',  -- "QA2 author-persistence ..."
+  'd72ab6ae-066f-48ec-8a53-1fc1b1753491'   -- "QA2 dup-post ..."
+)
+order by created_at;
+
+select id, author_name, left(content,60) from public.problem_comments
+where content ilike 'QA2 %' or author_name in ('QA2-Persist-Two','QA2 Commenter','QA2 DupCmt','QA2 LongCmt');
+
+-- deletes (run after approval)
+-- delete from public.problem_comments
+-- where content ilike 'QA2 %'
+--    or author_name in ('QA2-Persist-Two','QA2 Commenter','QA2 DupCmt','QA2 LongCmt');
+--
+-- delete from public.problems
+-- where id in (
+--   'a64d7222-bf49-4b74-a2de-2ab1159dc5f6',
+--   'e148c9d0-0974-4a5f-b6f8-b838c9b24b74',
+--   'e164171e-5f71-4bc5-aa63-a34e7b5395cc',
+--   '6b62f944-f8d8-47dc-b13f-7a98537841a2',
+--   'd72ab6ae-066f-48ec-8a53-1fc1b1753491'
+-- );
+--
+-- After: board back to 21 problems; "what to cook" starter keeps only
+-- Vibhor's genuine "Make a weekly schedule and stik to it".

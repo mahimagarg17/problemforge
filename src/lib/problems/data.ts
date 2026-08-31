@@ -73,7 +73,8 @@ export function isLowQualityProblem(p: Problem): boolean {
   const haystack = `${title}\n${p.description ?? ""}`;
   if (/(.)\1{11,}/.test(haystack)) return true; // same char 12+ times
   if (/\S{40,}/.test(haystack)) return true; // 40+ char unbroken token
-  if (/^\s*(qa\b|test\b|testing\b|asdf|lorem ipsum)/i.test(title)) return true;
+  // Leading "qa" / "qa2" / "test" / "test3" / "testing" / mash.
+  if (/^\s*(qa\d*|test\d*|testing|asdf|lorem ipsum|xxx+)\b/i.test(title)) return true;
   if (title.replace(/[^A-Za-z0-9]/g, "").length < 3) return true;
   return false;
 }
