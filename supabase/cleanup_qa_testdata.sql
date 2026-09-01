@@ -153,3 +153,28 @@ order by created_at;
 -- );
 --
 -- After: board back to 21 problems; the "Group trips" starter back to 0 replies.
+
+
+-- ==============================================================================
+-- ---- 7. FOURTH QA PASS: reply-notifications regression -----------------
+-- 2 problems, all titled "QA4 ...". Replies contain "QA4". Created to confirm
+-- the notifications change did not break the no-email post / reply / Me Too /
+-- author-snapshot flows. Cascade deletes their own replies + validations.
+-- ==============================================================================
+
+select id, title, created_at from public.problems
+where id in (
+  'b7deb444-151f-41a3-8c28-3c5e641a57f2',  -- QA4 no-email post
+  '24940487-77c0-4d3a-9fb8-58c48d439968'   -- QA4 snapshot-regression (Nisha)
+)
+order by created_at;
+
+select id, problem_id, author_name, left(content,50)
+from public.problem_comments where content like 'QA4 %' order by created_at;
+
+-- deletes (run after approval)
+-- delete from public.problem_comments where content like 'QA4 %';
+-- delete from public.problems where id in (
+--   'b7deb444-151f-41a3-8c28-3c5e641a57f2',
+--   '24940487-77c0-4d3a-9fb8-58c48d439968'
+-- );
