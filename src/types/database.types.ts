@@ -170,6 +170,69 @@ export interface Database {
           created_at?: string;
         };
       };
+      // Private. RLS-sealed; reachable only via the service role (server only).
+      problem_notification_subscriptions: {
+        Row: {
+          id: string;
+          problem_id: string;
+          subscriber_id: string | null;
+          email: string;
+          unsubscribe_token: string;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          problem_id: string;
+          subscriber_id?: string | null;
+          email: string;
+          unsubscribe_token?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          problem_id?: string;
+          subscriber_id?: string | null;
+          email?: string;
+          unsubscribe_token?: string;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
+      // Private. One row per reply; `comment_id` UNIQUE = idempotency key.
+      reply_notifications: {
+        Row: {
+          id: string;
+          comment_id: string;
+          problem_id: string;
+          status: "pending" | "sent" | "failed" | "skipped";
+          attempts: number;
+          error: string | null;
+          created_at: string;
+          updated_at: string;
+        };
+        Insert: {
+          id?: string;
+          comment_id: string;
+          problem_id: string;
+          status?: "pending" | "sent" | "failed" | "skipped";
+          attempts?: number;
+          error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+        Update: {
+          id?: string;
+          comment_id?: string;
+          problem_id?: string;
+          status?: "pending" | "sent" | "failed" | "skipped";
+          attempts?: number;
+          error?: string | null;
+          created_at?: string;
+          updated_at?: string;
+        };
+      };
     };
     Functions: {
       toggle_me_too: {

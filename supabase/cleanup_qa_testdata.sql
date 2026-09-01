@@ -105,3 +105,51 @@ where content ilike 'QA2 %' or author_name in ('QA2-Persist-Two','QA2 Commenter'
 --
 -- After: board back to 21 problems; "what to cook" starter keeps only
 -- Vibhor's genuine "Make a weekly schedule and stik to it".
+-- (Confirmed done: QA2 rows are no longer on production.)
+
+
+-- ==============================================================================
+-- ---- 6. THIRD QA PASS: author-identity verification ---------------------
+-- 9 problems, all titled "QA3-B<n>-...". Replies + one Me Too on QA3 rows
+-- cascade with the problem delete. ONE QA3 reply was left on the founder
+-- starter "Group trips fall apart..." (428a814c) and must be deleted
+-- explicitly - the starter itself stays.
+-- Every QA3 comment body starts with "QA3-". No genuine content matches.
+-- ==============================================================================
+
+-- preview
+select id, title, created_at from public.problems
+where id in (
+  '2391a7ba-0e2a-4a9e-b693-4b8560ebdf2e',  -- QA3-B1 "John"
+  '614ee0c1-e979-4ab3-ad8c-e6e2dfb26cfb',  -- QA3-B1 "Shifali"
+  '8e944941-5279-4848-88ba-2a859d63fe01',  -- QA3-B2 "Nisha"  (1 reply + 1 me too)
+  '951b9d02-0b6c-4d69-a317-e7bd90e537d6',  -- QA3-B3 "Nisha"  (1 me too)
+  '861d4cdd-15f8-4646-98f8-1d29617f8dea',  -- QA3-B4 "Nisha"  (3 replies)
+  '360e7cca-ee11-4e4f-a127-963467797dca',  -- QA3-B5 "John"   (1 reply)
+  'd65f90d6-2b91-4191-94a8-f055a5ddfe80',  -- QA3-B5 "Vibhor"
+  '060b978f-6b1e-45f3-a1b4-9193be651a9c',  -- QA3-B5 "Shifali"
+  'd20c76c1-05f1-4dd1-b2a3-598df917cdf9'   -- QA3-B5 "Nisha"
+)
+order by created_at;
+
+select id, problem_id, author_name, left(content, 50)
+from public.problem_comments
+where content like 'QA3-%'
+order by created_at;
+
+-- deletes (run after approval)
+-- delete from public.problem_comments where content like 'QA3-%';
+--
+-- delete from public.problems where id in (
+--   '2391a7ba-0e2a-4a9e-b693-4b8560ebdf2e',
+--   '614ee0c1-e979-4ab3-ad8c-e6e2dfb26cfb',
+--   '8e944941-5279-4848-88ba-2a859d63fe01',
+--   '951b9d02-0b6c-4d69-a317-e7bd90e537d6',
+--   '861d4cdd-15f8-4646-98f8-1d29617f8dea',
+--   '360e7cca-ee11-4e4f-a127-963467797dca',
+--   'd65f90d6-2b91-4191-94a8-f055a5ddfe80',
+--   '060b978f-6b1e-45f3-a1b4-9193be651a9c',
+--   'd20c76c1-05f1-4dd1-b2a3-598df917cdf9'
+-- );
+--
+-- After: board back to 21 problems; the "Group trips" starter back to 0 replies.

@@ -60,6 +60,44 @@ Anonymous sign-ins are enabled in `supabase/config.toml`
    "I have this problem too" runs through the existing `toggle_me_too`
    function so counts stay correct.
 
+## Reply notifications (optional email)
+
+When someone posts a problem they can optionally leave an email. When another
+person replies, ProblemForge sends that address one email. No account, no
+verification, no login. The email is stored in a private, RLS-sealed table
+that only the server (service role) can read; it never appears in any public
+query, on the problem page, or in a comment.
+
+To turn it on:
+
+1. Run `supabase/migrations/0003_reply_notifications.sql` in the hosted
+   Supabase SQL editor (additive, idempotent — creates two private tables).
+
+2. Set `SUPABASE_SERVICE_ROLE_KEY` (Project Settings -> API -> `service_role`,
+   the "secret" key). SERVER ONLY — never `NEXT_PUBLIC_`, never in the repo.
+   With just this set, emails are *captured* but not sent (recorded as
+   `skipped: not_configured`). The "notify me" field appears on the form.
+
+3. Create a Resend account (https://resend.com). Add and **verify the domain**
+   `problemforge.co` — Resend gives you the DNS records to add:
+   - `MX` on `send.problemforge.co` -> `feedback-smtp.<region>.amazonses.com`
+   - `TXT` (SPF) on `send.problemforge.co` -> `v=spf1 include:amazonses.com ~all`
+   - `TXT` (DKIM) on `resend._domainkey.problemforge.co` -> the key Resend shows
+   - optional `TXT` (DMARC) on `_dmarc.problemforge.co` -> `v=DMARC1; p=none;`
+   `notifications@problemforge.co` is a *sender identity only* — no mailbox
+   needs to exist.
+
+4. Set `RESEND_API_KEY` and `EMAIL_FROM="ProblemForge <notifications@problemforge.co>"`
+   (optionally `EMAIL_REPLY_TO`). Real emails now send.
+
+5. Set `NEXT_PUBLIC_SITE_URL=https://problemforge.co` so the "View reply" and
+   unsubscribe links point at the real domain.
+
+Failure isolation: a reply is saved and returns success independently of the
+email. Provider errors are logged and recorded (`reply_notifications.status`),
+never surfaced to the user. Each reply emails at most once (`comment_id` is
+UNIQUE in `reply_notifications`).
+
 ## What talks to what
 
 | Concern              | File                                   |
@@ -69,3 +107,6 @@ Anonymous sign-ins are enabled in `supabase/config.toml`
 | Local fallback store | `src/lib/problems/local-store.ts`      |
 | Anonymous session    | `src/lib/supabase/anon.ts`             |
 | Validation           | `src/lib/validations/problem.ts`       |
+| Reply notifications  | `src/lib/notifications/*`              |
+| Service-role client  | `src/lib/supabase/admin.ts` (server only) |
+| Unsubscribe          | `src/app/unsubscribe/route.ts`         |

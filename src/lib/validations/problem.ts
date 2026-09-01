@@ -47,6 +47,17 @@ export const newProblemSchema = z.object({
     .max(3000, "Keep it under 3000 characters.")
     .optional()
     .or(z.literal("")),
+  // Optional. Stored privately, only used to email the poster when someone
+  // replies. Empty string is allowed (the field is optional in the form).
+  email: z
+    .string()
+    .trim()
+    .toLowerCase()
+    .max(254, "That email address is too long.")
+    .email("Enter a valid email address, or leave it blank.")
+    .refine((v) => !/[\r\n]/.test(v), "That email address is not valid.")
+    .optional()
+    .or(z.literal("")),
 });
 
 export type NewProblemValues = z.infer<typeof newProblemSchema>;

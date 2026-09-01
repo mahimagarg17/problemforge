@@ -29,6 +29,9 @@ const TIPS = [
 
 export default function NewProblemPage() {
   const defaultName = getRememberedName();
+  // The optional "notify me" field only makes sense when the server can
+  // actually store it (service role configured).
+  const notificationsAvailable = Boolean(process.env.SUPABASE_SERVICE_ROLE_KEY);
 
   return (
     <Container className="py-14 sm:py-20">
@@ -50,7 +53,10 @@ export default function NewProblemPage() {
       </div>
 
       <div className="mt-12 lg:grid lg:grid-cols-[minmax(0,36rem)_1fr] lg:gap-x-16">
-        <PostProblemForm defaultName={defaultName} />
+        <PostProblemForm
+          defaultName={defaultName}
+          notificationsAvailable={notificationsAvailable}
+        />
 
         <aside className="mt-14 hidden lg:mt-0 lg:block">
           <div className="lg:sticky lg:top-24">

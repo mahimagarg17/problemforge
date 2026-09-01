@@ -5,9 +5,11 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { z } from "zod";
 import { createLooseClient } from "@/lib/supabase/server";
+import { createAdminClient } from "@/lib/supabase/admin";
 import { isSupabaseConfigured } from "@/lib/supabase/config";
 import { ensureAnonUser } from "@/lib/supabase/anon";
 import { newCommentSchema, newProblemSchema } from "@/lib/validations/problem";
+import { maybeSendReplyNotification } from "@/lib/notifications/reply-notification";
 import { classifyCategory, deriveTitle } from "@/lib/problems/labels";
 import {
   COOKIE_MAX_AGE,
@@ -72,6 +74,7 @@ export async function postProblem(
     frequency: formData.get("frequency"),
     pain_level: formData.get("pain_level"),
     workaround: formData.get("workaround") ?? "",
+    email: formData.get("email") ?? "",
   });
 
   if (!parsed.success) {
@@ -80,6 +83,7 @@ export async function postProblem(
 
   const input = parsed.data;
   const workaround = input.workaround?.trim() ? input.workaround.trim() : null;
+  const notifyEmail = input.email && input.email.length ? input.email : null;
   const category =
     input.category ?? classifyCategory(`${input.problem} ${workaround ?? ""}`);
   let newId: string;
@@ -133,6 +137,40 @@ export async function postProblem(
         };
       }
       newId = data.id;
+
+      // Optional private notify email. Stored only in the sealed
+      // subscriptions table via the service role; never on the problem row.
+      if (notifyEmail) {
+        const admin = createAdminClient();
+        if (admin) {
+          const { error: subError } = await admin
+            .from("problem_notification_subscriptions")
+            .upsert(
+              {
+                problem_id: newId,
+                subscriber_id: user.id,
+                email: notifyEmail,
+                updated_at: new Date().toISOString(),
+              },
+              { onConflict: "problem_id" },
+            );
+          if (subError) {
+            console.error(
+              "[pf:notify] subscription insert failed:",
+              subError.message,
+            );
+          } else {
+            console.log(
+              "[pf:analytics] notification_email_added",
+              JSON.stringify({ problemId: newId }),
+            );
+          }
+        } else {
+          console.warn(
+            "[pf:notify] SUPABASE_SERVICE_ROLE_KEY missing; notify email not stored",
+          );
+        }
+      }
     } catch (err) {
       console.error("[problemforge] postProblem failed:", err);
       return {
@@ -228,24 +266,43 @@ export async function addComment(
       const supabase = createLooseClient();
       const user = await ensureAnonUser(supabase);
 
-      let { error } = await supabase.from("problem_comments").insert({
-        problem_id: problemId,
-        author_id: user.id,
-        author_name: input.name,
-        content: input.content,
-      });
-
-      if (isMissingColumnError(error)) {
-        ({ error } = await supabase.from("problem_comments").insert({
+      let { data, error } = await supabase
+        .from("problem_comments")
+        .insert({
           problem_id: problemId,
           author_id: user.id,
+          author_name: input.name,
           content: input.content,
-        }));
+        })
+        .select("id")
+        .single();
+
+      if (isMissingColumnError(error)) {
+        ({ data, error } = await supabase
+          .from("problem_comments")
+          .insert({
+            problem_id: problemId,
+            author_id: user.id,
+            content: input.content,
+          })
+          .select("id")
+          .single());
       }
 
-      if (error) {
+      if (error || !data) {
         console.error("[problemforge] addComment insert error:", error);
         return { ok: false, error: "That comment did not save. Please try again." };
+      }
+
+      // Reply saved. Notification is best-effort and never affects this result.
+      try {
+        await maybeSendReplyNotification({
+          commentId: data.id,
+          problemId,
+          replierId: user.id,
+        });
+      } catch (notifyErr) {
+        console.error("[pf:notify] unexpected:", notifyErr);
       }
     } catch (err) {
       console.error("[problemforge] addComment failed:", err);

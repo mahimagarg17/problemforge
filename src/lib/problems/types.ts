@@ -36,6 +36,8 @@ export interface NewProblemInput {
   frequency: ProblemFrequency;
   pain_level: number;
   workaround?: string;
+  /** Optional private notify email. Ignored by the local dev store. */
+  email?: string;
 }
 
 export interface NewCommentInput {

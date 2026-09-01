@@ -50,7 +50,13 @@ function FieldError({ id, message }: { id: string; message?: string }) {
   );
 }
 
-export function PostProblemForm({ defaultName }: { defaultName: string }) {
+export function PostProblemForm({
+  defaultName,
+  notificationsAvailable = false,
+}: {
+  defaultName: string;
+  notificationsAvailable?: boolean;
+}) {
   const [state, formAction] = useFormState(postProblem, INITIAL);
   const [pain, setPain] = useState<number | null>(null);
   const [problemLen, setProblemLen] = useState(0);
@@ -97,6 +103,30 @@ export function PostProblemForm({ defaultName }: { defaultName: string }) {
         />
         <FieldError id="name-error" message={err.name} />
       </div>
+
+      {notificationsAvailable && (
+        <div>
+          <label htmlFor="email" className="font-display text-xl text-ink">
+            Get notified when someone responds
+          </label>
+          <p className="mt-1 text-sm text-ink-muted">
+            Optional. We&apos;ll only use this to let you know when someone
+            replies.
+          </p>
+          <input
+            id="email"
+            name="email"
+            type="email"
+            inputMode="email"
+            autoComplete="email"
+            placeholder="you@example.com"
+            aria-invalid={Boolean(err.email)}
+            aria-describedby={err.email ? "email-error" : undefined}
+            className={cn(FIELD_CLASS, "max-w-sm")}
+          />
+          <FieldError id="email-error" message={err.email} />
+        </div>
+      )}
 
       <div>
         <label htmlFor="problem" className="font-display text-xl text-ink">
