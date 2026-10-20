@@ -135,6 +135,45 @@ export async function listExampleProblems(limit = 4): Promise<Problem[]> {
     .slice(0, limit);
 }
 
+/**
+ * Problems posted from this browser. There is no login, so "mine" is whatever
+ * the long-lived anonymous session cookie already owns (the same `author_id`
+ * every post/vote/reply already uses). Never signs a new session in just to
+ * check this — a first-time visitor with no session simply has none.
+ */
+export async function listMyProblems(): Promise<Problem[]> {
+  if (!isSupabaseConfigured()) return [];
+
+  try {
+    const supabase = createLooseClient();
+    const {
+      data: { user },
+    } = await supabase.auth.getUser();
+    if (!user) return [];
+
+    const build = (columns: string) =>
+      supabase
+        .from("problems")
+        .select(columns)
+        .eq("author_id", user.id)
+        .order("created_at", { ascending: false });
+
+    let { data, error } = await build(PROBLEM_SELECT);
+    if (isMissingColumnError(error)) {
+      ({ data, error } = await build(BASE_COLUMNS));
+    }
+
+    if (error || !data) {
+      if (error) console.error("[problemforge] listMyProblems error:", error);
+      return [];
+    }
+    return (data as unknown as ProblemRow[]).map(toProblem);
+  } catch (err) {
+    console.error("[problemforge] listMyProblems failed:", err);
+    return [];
+  }
+}
+
 export async function getProblem(id: string): Promise<Problem | null> {
   if (!isSupabaseConfigured()) return localGetProblem(id);
   // Seed-fallback ids (e.g. "seed-pg-listings") are not valid uuids; skip the

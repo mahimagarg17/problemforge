@@ -20,6 +20,13 @@ export function SiteHeader() {
             <span className="hidden sm:inline">Browse problems</span>
           </Link>
           <Link
+            href="/problems/mine"
+            className="text-ink-muted transition-colors hover:text-ink"
+          >
+            <span className="sm:hidden">Mine</span>
+            <span className="hidden sm:inline">My problems</span>
+          </Link>
+          <Link
             href="/how-it-works"
             className="hidden text-ink-muted transition-colors hover:text-ink sm:inline"
           >

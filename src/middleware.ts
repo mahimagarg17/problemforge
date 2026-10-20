@@ -4,6 +4,10 @@ import { updateSession } from "@/lib/supabase/middleware";
 const UUID_RE =
   /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 
+// Real, non-id routes nested under /problems/<segment>. Keep in sync with
+// src/app/problems/*/page.tsx (anything that isn't the [id] dynamic route).
+const PROBLEMS_SUBROUTES = new Set(["new", "mine"]);
+
 /**
  * Keeps the (anonymous) Supabase auth session fresh on every request so that
  * Server Components can read `auth.uid()`-scoped data. When Supabase is not
@@ -16,7 +20,11 @@ const UUID_RE =
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   const match = pathname.match(/^\/problems\/([^/]+)\/?$/);
-  if (match && match[1] !== "new" && !UUID_RE.test(decodeURIComponent(match[1]))) {
+  if (
+    match &&
+    !PROBLEMS_SUBROUTES.has(match[1]) &&
+    !UUID_RE.test(decodeURIComponent(match[1]))
+  ) {
     const url = request.nextUrl.clone();
     url.pathname = "/_not-found";
     return NextResponse.rewrite(url, { status: 404 });
