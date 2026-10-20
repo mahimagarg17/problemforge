@@ -22,8 +22,13 @@ const sans = Public_Sans({
 const SITE_DESCRIPTION =
   "A public board for everyday problems that don't have a good solution yet. Post the problem and see if someone has a better idea.";
 
+// Same fallback as robots.ts / sitemap.ts. NEXT_PUBLIC_SITE_URL isn't set on
+// Vercel yet, and this previously fell back to localhost, which made every
+// og:image URL unreachable in production.
+const SITE_URL = process.env.NEXT_PUBLIC_SITE_URL || "https://problemforge-gamma.vercel.app";
+
 export const metadata: Metadata = {
-  metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
+  metadataBase: new URL(SITE_URL),
   title: {
     default: "ProblemForge",
     template: "%s · ProblemForge",
