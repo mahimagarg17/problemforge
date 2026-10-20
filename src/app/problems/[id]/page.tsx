@@ -27,7 +27,21 @@ export async function generateMetadata({
   // Decide the 404 here, before the response is committed, so an unknown id
   // returns a real HTTP 404 and not a 200 with the "not found" body.
   if (!problem) notFound();
-  return { title: problem.title, description: problem.description.slice(0, 155) };
+  const description = problem.description.slice(0, 155);
+  return {
+    title: problem.title,
+    description,
+    openGraph: {
+      type: "article",
+      title: problem.title,
+      description,
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: problem.title,
+      description,
+    },
+  };
 }
 
 export default async function ProblemPage({

@@ -19,14 +19,27 @@ const sans = Public_Sans({
   weight: ["400", "500", "600"],
 });
 
+const SITE_DESCRIPTION =
+  "A public board for everyday problems that don't have a good solution yet. Post the problem and see if someone has a better idea.";
+
 export const metadata: Metadata = {
   metadataBase: new URL(process.env.NEXT_PUBLIC_SITE_URL || "http://localhost:3000"),
   title: {
     default: "ProblemForge",
     template: "%s · ProblemForge",
   },
-  description:
-    "A public board for everyday problems that don't have a good solution yet. Post the problem and see if someone has a better idea.",
+  description: SITE_DESCRIPTION,
+  openGraph: {
+    type: "website",
+    siteName: "ProblemForge",
+    title: "ProblemForge",
+    description: SITE_DESCRIPTION,
+  },
+  twitter: {
+    card: "summary_large_image",
+    title: "ProblemForge",
+    description: SITE_DESCRIPTION,
+  },
 };
 
 export default function RootLayout({
